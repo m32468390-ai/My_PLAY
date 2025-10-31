@@ -1,37 +1,22 @@
 <!doctype html>
 <html lang="ar">
-<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>Mini OpenWorld — Offline (3D soldier)</title>
-<style>html,body{height:100%;margin:0;background:#071125;overflow:hidden;font-family:Arial}#info{position:fixed;left:12px;top:12px;color:#fff;z-index:5;background:rgba(0,0,0,0.35);padding:8px;border-radius:6px}#uiMobile{position:fixed;left:0;right:0;bottom:10px;display:flex;justify-content:center;gap:10px;z-index:5}.mBtn{background:#06b6d4;color:#001;border:none;padding:12px 18px;border-radius:10px;font-weight:700;opacity:0.95}.mBtn:active{transform:translateY(2px)}canvas{display:block}@media(min-width:820px){ #uiMobile{display:none} }</style>
-</head><body>
-<div id="info">تحكم: WASD أو أسهم — Space لإطلاق — B لقنبلة — على الموبايل استخدم الأزرار تحت<div>Score: <span id="score">0</span></div></div>
-<div id="uiMobile">
-<button class="mBtn" id="mLeft">⬅️</button>
-<button class="mBtn" id="mShoot">🔫</button>
-<button class="mBtn" id="mRight">➡️</button>
-<button class="mBtn" id="mBomb">💣</button>
-</div>
-<canvas id="c"></canvas>
-<script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
-<script>
-const canvas=document.getElementById('c');const scoreEl=document.getElementById('score');let score=0;
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setSize(window.innerWidth,window.innerHeight);renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x101428);
-const camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,2000);camera.position.set(0,6,-12);camera.lookAt(0,2,0);
-const hemi=new THREE.HemisphereLight(0xffffff,0x444466,0.8);hemi.position.set(0,50,0);scene.add(hemi);
-const dir=new THREE.DirectionalLight(0xffffff,0.9);dir.position.set(-10,20,10);scene.add(dir);
-const groundGeo=new THREE.PlaneGeometry(500,500,50,50);const groundMat=new THREE.MeshStandardMaterial({color:0x2b2b2b,roughness:1});const ground=new THREE.Mesh(groundGeo,groundMat);ground.rotation.x=-Math.PI/2;ground.position.y=0;scene.add(ground);
-const obstacles=[];function addObstacle(x,z,w,h){const g=new THREE.BoxGeometry(w,h,w);const m=new THREE.MeshStandardMaterial({color:0x555555});const box=new THREE.Mesh(g,m);box.position.set(x,h/2,z);scene.add(box);obstacles.push(box);}for(let i=0;i<10;i++){addObstacle((Math.random()-0.5)*120,(Math.random()-0.5)*120,6+Math.random()*18,4+Math.random()*18);}
-const player={mesh:(()=>{const g=new THREE.BoxGeometry(1.2,2,0.9);const m=new THREE.MeshStandardMaterial({color:0x8be36b});const mm=new THREE.Mesh(g,m);mm.position.set(0,1,0);scene.add(mm);return mm;})(),speed:0.12,vx:0,vz:0,facing:new THREE.Vector3(0,0,1)};
-const enemies=[];function spawnEnemy(){const size=1.6;const g=new THREE.BoxGeometry(size,size*1.4,size);const m=new THREE.MeshStandardMaterial({color:0xcc4444});const e=new THREE.Mesh(g,m);const angle=Math.random()*Math.PI*2;const r=50+Math.random()*60;e.position.set(Math.cos(angle)*r,size*0.7,Math.sin(angle)*r);e.userData={alive:true,speed:0.02+Math.random()*0.06,fallTimer:0};scene.add(e);enemies.push(e);}for(let i=0;i<6;i++)spawnEnemy();
-const bullets=[];function spawnBulletObj(pos,vel){bullets.push({pos:pos.clone(),vel:vel.clone(),life:120});}
-const bombs=[];const particles=[];function createExplosionAt(p,power=1){const num=18*power;for(let i=0;i<num;i++){const ang=Math.random()*Math.PI*2;const speed=0.6+Math.random()*2.4;particles.push({pos:p.clone(),vel:new THREE.Vector3(Math.cos(ang)*speed,(Math.random()*1.6)-0.6,Math.sin(ang)*speed),life:40+Math.random()*20,size:0.1+Math.random()*0.4,color:0xffaa33});}}
-let bombCount=3;function updateUI(){scoreEl.textContent=Math.floor(score);}const key={};window.addEventListener('keydown',(e)=>{key[e.key.toLowerCase()]=true;if(e.code==='Space'){fireBullet();}if(e.key.toLowerCase()==='b'){throwBomb();}});window.addEventListener('keyup',(e)=>{key[e.key.toLowerCase()]=false;});
-document.getElementById('mLeft').addEventListener('touchstart',(e)=>{e.preventDefault();key['a']=true;});document.getElementById('mLeft').addEventListener('touchend',(e)=>{e.preventDefault();key['a']=false;});
-document.getElementById('mRight').addEventListener('touchstart',(e)=>{e.preventDefault();key['d']=true;});document.getElementById('mRight').addEventListener('touchend',(e)=>{e.preventDefault();key['d']=false;});
-document.getElementById('mShoot').addEventListener('touchstart',(e)=>{e.preventDefault();fireBullet();});document.getElementById('mBomb').addEventListener('touchstart',(e)=>{e.preventDefault();throwBomb();});
-function update(dt){let forward=0,right=0;if(key['w']||key['arrowup'])forward=1;if(key['s']||key['arrowdown'])forward=-1;if(key['a']||key['arrowleft'])right=-1;if(key['d']||key['arrowright'])right=1;if(forward!==0||right!==0){const dir=new THREE.Vector3(right,0,forward).normalize();player.facing.copy(dir);player.mesh.position.add(dir.multiplyScalar(player.speed*(dt*60)));}player.mesh.position.y=1.0;const camOffset=player.facing.clone().multiplyScalar(-8);camOffset.y=4;const desiredCam=player.mesh.position.clone().add(camOffset);camera.position.lerp(desiredCam,0.12);camera.lookAt(player.mesh.position.clone().add(new THREE.Vector3(0,1,0)));enemies.forEach(e=>{if(e.userData.alive){const dir=player.mesh.position.clone().sub(e.position);dir.y=0;const dist=dir.length();dir.normalize();e.position.add(dir.multiplyScalar(e.userData.speed*(dt*60)));if(dist<2.0){e.position.add(dir.multiplyScalar(-1.2));}}else{e.userData.fallTimer++;e.rotation.z+=0.03;if(e.userData.fallTimer>100){scene.remove(e);}}});for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.pos.add(b.vel.clone().multiplyScalar(dt*60));b.life--;for(let j=0;j<enemies.length;j++){const e=enemies[j];if(e.userData.alive){const dx=e.position.clone().sub(b.pos).length();if(dx<1.6){e.userData.alive=false;createExplosionAt(e.position.clone(),1.2);score+=10;updateUI();bullets.splice(i,1);break;}}}if(b.life<=0)bullets.splice(i,1);}for(let i=bombs.length-1;i>=0;i--){const bo=bombs[i];bo.vel.y-=0.04;bo.pos.add(bo.vel.clone().multiplyScalar(dt*60));if(bo.pos.y<0.5){bo.pos.y=0.5;bo.vel.y*=-0.2;bo.vel.x*=0.7;bo.vel.z*=0.7;}if(!bo.exploded&&performance.now()>=bo.explodeAt){bo.exploded=true;createExplosionAt(bo.pos,2.6);const R=8.0;enemies.forEach(e=>{if(e.userData.alive){const d=e.position.clone().sub(bo.pos).length();if(d<=R){e.userData.alive=false;score+=12;updateUI();}}});setTimeout(()=>{const idx=bombs.indexOf(bo);if(idx>-1)bombs.splice(idx,1);},400);}}for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.vel.y-=0.02;p.pos.add(p.vel.clone().multiplyScalar(dt*60));p.life--;if(p.life<=0)particles.splice(i,1);}if(Math.random()<0.005)spawnEnemy();}
-function render(){dynamicGroup.children=[];bullets.forEach(b=>{const m=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),new THREE.MeshBasicMaterial({color:0xffdd66}));m.position.copy(b.pos);dynamicGroup.add(m);});bombs.forEach(b=>{const m=new THREE.Mesh(new THREE.SphereGeometry(0.25,8,8),new THREE.MeshStandardMaterial({color:0x666666}));m.position.copy(b.pos);dynamicGroup.add(m);});particles.forEach(p=>{const m=new THREE.Mesh(new THREE.SphereGeometry(p.size,6,6),new THREE.MeshBasicMaterial({color:p.color||0xffaa33}));m.position.copy(p.pos);dynamicGroup.add(m);});renderer.render(scene,camera);}
-const dynamicGroup=new THREE.Group();scene.add(dynamicGroup);const grid=new THREE.GridHelper(500,50,0x222222,0x1b1b1b);scene.add(grid);let last=performance.now();function tick(){const now=performance.now();const dt=Math.min(0.05,(now-last)/1000);last=now;update(dt);render();requestAnimationFrame(tick);}player.mesh.position.set(0,1,0);scene.add(player.mesh);updateUI();tick();function fireBullet(){const dir=player.facing.clone().normalize();const start=player.mesh.position.clone().add(new THREE.Vector3(0,0.6,0)).add(dir.clone().multiplyScalar(1.4));spawnBulletObj(start,dir.multiplyScalar(1.6));for(let i=0;i<6;i++){particles.push({pos:start.clone(),vel:new THREE.Vector3((Math.random()-0.5)*0.5+dir.x*0.6,(Math.random()-0.5)*0.3+0.05, (Math.random()-0.5)*0.5+dir.z*0.6),life:20,size:0.06});}camera.position.add(player.facing.clone().multiplyScalar(-0.05));}function throwBomb(){if(bombCount<=0)return;bombCount--;updateUI();const dir=player.facing.clone().normalize();const pos=player.mesh.position.clone().add(new THREE.Vector3(0,0.7,0)).add(dir.clone().multiplyScalar(1.2));bombs.push({pos:pos,vel:dir.clone().multiplyScalar(0.9).add(new THREE.Vector3(0,0.6,0)),explodeAt:performance.now()+3000,exploded:false,r:0});}
-document.getElementById('mShoot').addEventListener('click',()=>fireBullet());document.getElementById('mBomb').addEventListener('click',()=>throwBomb());let dragging=false,lastX=0;window.addEventListener('touchstart',(e)=>{if(e.touches.length===1){dragging=true;lastX=e.touches[0].clientX;}});window.addEventListener('touchmove',(e)=>{if(dragging&&e.touches.length===1){const dx=e.touches[0].clientX-lastX;lastX=e.touches[0].clientX;const angle=dx*0.003;const f=player.facing;const cos=Math.cos(angle),sin=Math.sin(angle);const nx=f.x*cos-f.z*sin;const nz=f.x*sin+f.z*cos;player.facing.set(nx,0,nz).normalize();}});window.addEventListener('touchend',()=>{dragging=false;});window.addEventListener('resize',()=>{renderer.setSize(window.innerWidth,window.innerHeight);camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();});
-</script>
-</body></html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>معركة الصحراء — Desert Battle</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
+  <div id="hud" class="hud">
+    <div>صحتك: <span id="playerHealth">100</span></div>
+    <div>صحة الأعداء: <span id="enemyHealth">100</span></div>
+    <div>المستوى: <span id="levelDisplay">1</span></div>
+    <div>Score: <span id="score">0</span></div>
+  </div>
+
+  <!-- Babylon.js CDN -->
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,22 +1,53 @@
 <!doctype html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>معركة الصحراء — Desert Battle</title>
-<link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local Warfare — Prototype</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <canvas id="renderCanvas"></canvas>
-  <div id="hud" class="hud">
-    <div>صحتك: <span id="playerHealth">100</span></div>
-    <div>صحة الأعداء: <span id="enemyHealth">100</span></div>
-    <div>المستوى: <span id="levelDisplay">1</span></div>
-    <div>Score: <span id="score">0</span></div>
-  </div>
+<div class="bg-wrap">
+  <img src="assets/img/war-bg.jpg" alt="war background" class="bg-img"/>
+  <div class="bg-filter"></div>
+</div>
 
-  <!-- Babylon.js CDN -->
-  <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script src="script.js"></script>
+<header class="hero">
+  <div class="brand">
+    <h1>LOCAL WARFARE</h1>
+    <p class="tag">نسخة تعليمية — مُستلهمة</p>
+  </div>
+</header>
+
+<main class="center-stage">
+  <div class="panel">
+    <h2>جاهز للمعركة؟</h2>
+    <p class="sub">اضغط زر "Start Game" للدخول — (نسخة WebGL غير مرفوعة حالياً)</p>
+    <button id="startBtn" class="start-btn">START GAME</button>
+    <p class="hint">لو عندك نسخة WebGL، ارفعها في نفس الريبو وسيعمل الزر تلقائياً.</p>
+  </div>
+</main>
+
+<footer class="footer">
+  <p>Made by Mostafa — نسخة تعليمية ومستقلة</p>
+</footer>
+
+<script>
+document.getElementById('startBtn').addEventListener('click', function(){
+  // If WebGL exists in /webgl/index.html, open it. Otherwise show a modal.
+  var webglPath = 'webgl/index.html';
+  fetch(webglPath, {method: 'HEAD'}).then(function(resp){
+    if (resp.ok) {
+      window.location.href = webglPath;
+    } else {
+      // show simple modal
+      alert('نسخة WebGL غير موجودة حالياً. أرفع ملفات WebGL إلى مجلد /webgl في الريبو وسيعمل التشغيل.');
+    }
+  }).catch(function(){
+    alert('نسخة WebGL غير موجودة حالياً. أرفع ملفات WebGL إلى مجلد /webgl في الريبو وسيعمل التشغيل.');
+  });
+});
+</script>
+
 </body>
 </html>
